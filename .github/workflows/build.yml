@@ -1,0 +1,29 @@
+name: Build Windows EXE
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install tools
+        run: pip install -U "yt-dlp[default]" pyinstaller
+      - name: Get ffmpeg
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path bin | Out-Null
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip" -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffx
+          Copy-Item ffx\*\bin\ffmpeg.exe bin\
+          Copy-Item ffx\*\bin\ffprobe.exe bin\
+      - name: Build EXE
+        shell: pwsh
+        run: pyinstaller --noconfirm --onefile --windowed --name GrabIt --collect-all yt_dlp --add-binary "bin/ffmpeg.exe;bin" --add-binary "bin/ffprobe.exe;bin" grabit_pc.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GrabIt-PC
+          path: dist/GrabIt.exe
